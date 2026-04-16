@@ -1,32 +1,11 @@
 [
-  {
-    "id": 1,
-    "username": "admin",
-    "password": "Admin123@",
-    "fullName": "Quản trị hệ thống",
-    "role": "admin"
-  },
-  {
-    "id": 2,
-    "username": "phongdaotao",
-    "password": "123",
-    "fullName": "Phòng Quản lý Sinh viên",
-    "role": "training"
-  },
-  {
-    "id": 3,
-    "username": "khoa_cntt",
-    "password": "123",
-    "fullName": "Khoa Công nghệ thông tin",
-    "role": "faculty",
-    "facultyName": "Công nghệ thông tin"
-  },
-  {
-    "id": 4,
-    "username": "giangvien1",
-    "password": "123",
-    "fullName": "Nguyễn Văn Giảng",
-    "role": "lecturer",
-    "department": "Công nghệ thông tin"
-  }
+  { "id": 1, "username": "admin", "password": "Admin123@", "fullName": "Quản trị hệ thống", "role": "admin" },
+  { "id": 2, "username": "phongdaotao", "password": "123456Ak@", "fullName": "Phòng Quản lý Sinh viên", "role": "training" },
+  { "id": 3, "username": "khoa_cntt", "password": "123456Ak@", "fullName": "Khoa Công nghệ thông tin", "role": "faculty", "facultyName": "Công nghệ thông tin" },
+  { "id": 4, "username": "khoa_dientu", "password": "123456Ak@", "fullName": "Khoa Điện - Điện tử", "role": "faculty", "facultyName": "Điện - Điện tử" },
+  { "id": 5, "username": "khoa_kinhte", "password": "123456Ak@", "fullName": "Khoa Kinh tế", "role": "faculty", "facultyName": "Kinh tế" },
+  { "id": 6, "username": "khoa_ngonngu", "password": "123456Ak@", "fullName": "Khoa Ngôn ngữ", "role": "faculty", "facultyName": "Ngôn ngữ" },
+  { "id": 7, "username": "TranVanTien", "password": "123456Ak@", "fullName": "Trần Văn Tiến", "role": "lecturer", "department": "Công nghệ thông tin" },
+  { "id": 8, "username": "NguyenQuyThanh", "password": "123456Ak@", "fullName": "Nguyễn Quý Thành", "role": "lecturer", "department": "Điện - Điện tử" },
+  { "id": 9, "username": "NguyenVietTruong", "password": "123456Ak@", "fullName": "Nguyễn Việt Trường", "role": "lecturer", "department": "Ngôn ngữ" }
 ]
