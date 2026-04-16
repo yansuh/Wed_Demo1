@@ -6,7 +6,6 @@
     <title>Dashboard · Quản lý Học vụ</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Style chung (nếu có) -->
     <link rel="stylesheet" href="css/style.css">
     <style>
         body { background: #f0f4f8; font-family: system-ui, sans-serif; }
@@ -51,7 +50,7 @@
         <div id="roleContent"></div>
     </div>
 
-    <!-- Modal thêm môn học (dùng chung cho Faculty) -->
+    <!-- Modal thêm môn học (Faculty) -->
     <div id="addSubjectModal" class="modal">
         <div class="modal-content">
             <h3 class="text-lg font-bold mb-4">➕ Thêm môn học mới</h3>
@@ -80,7 +79,7 @@
         </div>
     </div>
 
-    <!-- Modal sửa môn học -->
+    <!-- Modal sửa môn học (Faculty) -->
     <div id="editSubjectModal" class="modal">
         <div class="modal-content">
             <h3 class="text-lg font-bold mb-4">✏️ Chỉnh sửa môn học</h3>
@@ -105,6 +104,28 @@
                 <div class="flex gap-2 justify-end">
                     <button type="button" id="cancelEditBtn" class="px-4 py-2 border rounded-xl">Hủy</button>
                     <button type="submit" class="btn-primary">Lưu thay đổi</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal đổi mật khẩu (Admin) -->
+    <div id="changePasswordModal" class="modal">
+        <div class="modal-content">
+            <h3 class="text-lg font-bold mb-4">🔐 Đổi mật khẩu</h3>
+            <form id="changePasswordForm">
+                <input type="hidden" id="cpUserId">
+                <div class="mb-3">
+                    <label class="block text-sm font-medium mb-1">Tên đăng nhập</label>
+                    <input type="text" id="cpUsername" class="border rounded-xl p-2 w-full bg-gray-100" readonly disabled>
+                </div>
+                <div class="mb-3">
+                    <label class="block text-sm font-medium mb-1">Mật khẩu mới</label>
+                    <input type="text" id="cpNewPassword" class="border rounded-xl p-2 w-full" placeholder="Nhập mật khẩu mới" required>
+                </div>
+                <div class="flex gap-2 justify-end">
+                    <button type="button" id="cancelChangePwdBtn" class="px-4 py-2 border rounded-xl">Hủy</button>
+                    <button type="submit" class="btn-primary">Cập nhật</button>
                 </div>
             </form>
         </div>
@@ -179,7 +200,7 @@
             }
         }
 
-        // ------------------- LECTURER (Chỉ xem môn thuộc khoa của mình) -------------------
+        // ------------------- LECTURER -------------------
         async function renderLecturerPanel() {
             const allSubjects = await fetchAPI('/api/subjects');
             const lecturerDept = currentUser.department || '';
@@ -222,7 +243,7 @@
             document.getElementById('searchInput').addEventListener('input', e => renderTable(e.target.value.toLowerCase()));
         }
 
-        // ------------------- FACULTY (Khoa) - Có quyền thêm, sửa môn -------------------
+        // ------------------- FACULTY (Khoa) -------------------
         async function renderFacultyPanel() {
             const allSubjects = await fetchAPI('/api/subjects');
             const facultyName = currentUser.facultyName;
@@ -285,13 +306,12 @@
             
             renderTable();
 
-            // Modal thêm môn học
+            // Modal thêm môn
             const addModal = document.getElementById('addSubjectModal');
             const cancelAddBtn = document.getElementById('cancelAddBtn');
             const addForm = document.getElementById('addSubjectForm');
             
             document.getElementById('showAddModalBtn').onclick = () => {
-                // Tạo mã môn tự động (có thể sửa)
                 document.getElementById('addSubjectCode').value = `MH${Date.now().toString().slice(-6)}`;
                 document.getElementById('addSubjectName').value = '';
                 document.getElementById('addSubjectCredits').value = 3;
@@ -308,18 +328,12 @@
                 const code = document.getElementById('addSubjectCode').value.trim();
                 const credits = parseInt(document.getElementById('addSubjectCredits').value);
                 const lecturer = document.getElementById('addSubjectLecturer').value.trim();
-                
                 if (!name) return alert('Vui lòng nhập tên môn học');
-                
                 const newSub = {
                     code: code || `MH${Date.now().toString().slice(-6)}`,
-                    name,
-                    faculty: facultyName,
-                    credits,
-                    lecturer: lecturer || 'Chưa phân công',
-                    status: 'active'
+                    name, faculty: facultyName, credits,
+                    lecturer: lecturer || 'Chưa phân công', status: 'active'
                 };
-                
                 const result = await fetchAPI('/api/subjects', { method: 'POST', body: JSON.stringify(newSub) });
                 if (result.success) {
                     const fresh = await fetchAPI('/api/subjects');
@@ -377,16 +391,13 @@
                 const subjectId = document.getElementById('requestSubject').value;
                 const message = document.getElementById('requestMsg').value.trim();
                 if (!subjectId || !message) return alert('Chọn môn và nhập nội dung');
-                await fetchAPI('/api/requests', { 
-                    method: 'POST', 
-                    body: JSON.stringify({ subjectId, message, requestedBy: currentUser.username }) 
-                });
+                await fetchAPI('/api/requests', { method: 'POST', body: JSON.stringify({ subjectId, message, requestedBy: currentUser.username }) });
                 alert('Yêu cầu đã gửi đến Phòng đào tạo');
                 document.getElementById('requestMsg').value = '';
             };
         }
 
-        // ------------------- TRAINING (Phòng Quản lý Sinh viên) -------------------
+        // ------------------- TRAINING -------------------
         async function renderTrainingPanel() {
             let subjects = await fetchAPI('/api/subjects');
             const container = document.getElementById('roleContent');
@@ -449,7 +460,7 @@
             };
         }
 
-        // ------------------- ADMIN -------------------
+        // ------------------- ADMIN (Quản trị + Xem/Đổi mật khẩu) -------------------
         async function renderAdminPanel() {
             let users = await fetchAPI('/api/users');
             const container = document.getElementById('roleContent');
@@ -462,29 +473,38 @@
                         <select id="newRole" class="border rounded-xl p-2">
                             <option>training</option><option>faculty</option><option>lecturer</option><option>admin</option>
                         </select>
-                        <button id="addUserBtn" class="btn-primary">Thêm</button>
+                        <button id="addUserBtn" class="btn-primary">➕ Thêm</button>
                     </div>
                     <div class="overflow-x-auto">
                         <table class="min-w-full">
-                            <thead><tr><th>Username</th><th>Họ tên</th><th>Vai trò</th><th>Khoa/Bộ môn</th><th></th></tr></thead>
+                            <thead><tr><th>Username</th><th>Họ tên</th><th>Vai trò</th><th>Khoa/Bộ môn</th><th>Mật khẩu</th><th>Thao tác</th></tr></thead>
                             <tbody id="userTable"></tbody>
                         </table>
                     </div>
                 </div>
             `;
+
             function renderUsers() {
                 const tbody = document.getElementById('userTable');
-                if (!users.length) {
-                    tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4">Không có tài khoản</td></tr>';
+                if (!users || users.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4">Không có tài khoản</td></tr>';
                     return;
                 }
                 tbody.innerHTML = users.map(u => `
                     <tr>
-                        <td>${escapeHtml(u.username)}</td><td>${escapeHtml(u.fullName)}</td><td>${escapeHtml(u.role)}</td>
+                        <td>${escapeHtml(u.username)}</td>
+                        <td>${escapeHtml(u.fullName)}</td>
+                        <td>${escapeHtml(u.role)}</td>
                         <td>${escapeHtml(u.facultyName || u.department || '')}</td>
-                        <td><button class="delUserBtn text-red-500" data-id="${u.id}"><i class="fas fa-trash"></i></button></td>
+                        <td><span class="text-gray-400" title="Mật khẩu được ẩn">••••••</span></td>
+                        <td>
+                            <button class="changePwdBtn text-blue-600 mr-2" data-id="${u.id}" data-username="${escapeHtml(u.username)}"><i class="fas fa-key"></i> Đổi MK</button>
+                            <button class="resetPwdBtn text-orange-500 mr-2" data-id="${u.id}" data-username="${escapeHtml(u.username)}"><i class="fas fa-undo-alt"></i> Reset</button>
+                            <button class="delUserBtn text-red-500" data-id="${u.id}"><i class="fas fa-trash"></i> Xóa</button>
+                        </td>
                     </tr>
                 `).join('');
+
                 document.querySelectorAll('.delUserBtn').forEach(btn => btn.onclick = async () => {
                     if(confirm('Xóa tài khoản?')) {
                         await fetchAPI(`/api/users/${btn.dataset.id}`, { method: 'DELETE' });
@@ -492,17 +512,52 @@
                         renderUsers();
                     }
                 });
+                document.querySelectorAll('.changePwdBtn').forEach(btn => {
+                    btn.onclick = () => openChangePasswordModal(btn.dataset.id, btn.dataset.username);
+                });
+                document.querySelectorAll('.resetPwdBtn').forEach(btn => {
+                    btn.onclick = async () => {
+                        if(!confirm(`Đặt lại mật khẩu cho "${btn.dataset.username}" về "123"?`)) return;
+                        await fetchAPI(`/api/users/${btn.dataset.id}`, { method: 'PUT', body: JSON.stringify({ password: '123' }) });
+                        alert(`Đã reset mật khẩu của ${btn.dataset.username}`);
+                    };
+                });
             }
             renderUsers();
+
+            // Modal đổi mật khẩu
+            const cpModal = document.getElementById('changePasswordModal');
+            const cancelCpBtn = document.getElementById('cancelChangePwdBtn');
+            const cpForm = document.getElementById('changePasswordForm');
+            
+            window.openChangePasswordModal = (userId, username) => {
+                document.getElementById('cpUserId').value = userId;
+                document.getElementById('cpUsername').value = username;
+                document.getElementById('cpNewPassword').value = '';
+                cpModal.classList.add('active');
+            };
+            cancelCpBtn.onclick = () => cpModal.classList.remove('active');
+            cpModal.onclick = (e) => { if (e.target === cpModal) cpModal.classList.remove('active'); };
+            cpForm.onsubmit = async (e) => {
+                e.preventDefault();
+                const userId = document.getElementById('cpUserId').value;
+                const newPassword = document.getElementById('cpNewPassword').value.trim();
+                if (!newPassword) return alert('Vui lòng nhập mật khẩu mới');
+                await fetchAPI(`/api/users/${userId}`, { method: 'PUT', body: JSON.stringify({ password: newPassword }) });
+                alert('Cập nhật mật khẩu thành công!');
+                cpModal.classList.remove('active');
+            };
+
             document.getElementById('addUserBtn').onclick = async () => {
                 const username = document.getElementById('newUsername').value.trim();
                 const fullName = document.getElementById('newFullname').value.trim();
-                if(!username || !fullName) return alert('Nhập đủ thông tin');
-                await fetchAPI('/api/users', { method: 'POST', body: JSON.stringify({
-                    username, fullName, role: document.getElementById('newRole').value, password: '123'
-                })});
+                const role = document.getElementById('newRole').value;
+                if (!username || !fullName) return alert('Nhập đủ thông tin');
+                await fetchAPI('/api/users', { method: 'POST', body: JSON.stringify({ username, fullName, role, password: '123' }) });
                 users = await fetchAPI('/api/users');
                 renderUsers();
+                document.getElementById('newUsername').value = '';
+                document.getElementById('newFullname').value = '';
             };
         }
     </script>
