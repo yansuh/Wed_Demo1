@@ -1,0 +1,20 @@
+[
+  {
+    "id": 1776316401528,
+    "timestamp": "2026-04-16 05:13",
+    "action": "Đăng nhập: phongdaotao",
+    "user": "phongdaotao"
+  },
+  {
+    "id": 1776314828688,
+    "timestamp": "2026-04-16 04:47",
+    "action": "Đăng nhập: admin",
+    "user": "admin"
+  },
+  {
+    "id": 1776163867619,
+    "timestamp": "2026-04-14 10:51",
+    "action": "Khởi tạo hệ thống",
+    "user": "System"
+  }
+]

@@ -1,0 +1,32 @@
+[
+  {
+    "id": 1,
+    "username": "admin",
+    "password": "Admin123@",
+    "fullName": "Quản trị hệ thống",
+    "role": "admin"
+  },
+  {
+    "id": 2,
+    "username": "phongdaotao",
+    "password": "123",
+    "fullName": "Phòng Quản lý Sinh viên",
+    "role": "training"
+  },
+  {
+    "id": 3,
+    "username": "khoa_cntt",
+    "password": "123",
+    "fullName": "Khoa Công nghệ thông tin",
+    "role": "faculty",
+    "facultyName": "Công nghệ thông tin"
+  },
+  {
+    "id": 4,
+    "username": "giangvien1",
+    "password": "123",
+    "fullName": "Nguyễn Văn Giảng",
+    "role": "lecturer",
+    "department": "Công nghệ thông tin"
+  }
+]
