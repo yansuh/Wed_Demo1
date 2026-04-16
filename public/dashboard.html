@@ -243,11 +243,18 @@
             document.getElementById('searchInput').addEventListener('input', e => renderTable(e.target.value.toLowerCase()));
         }
 
-        // ------------------- FACULTY (Khoa) -------------------
+        // ------------------- FACULTY (Khoa) - Có trim() để lọc chính xác -------------------
         async function renderFacultyPanel() {
             const allSubjects = await fetchAPI('/api/subjects');
             const facultyName = currentUser.facultyName;
-            let subjects = allSubjects.filter(s => s.faculty === facultyName);
+            console.log('Faculty name:', facultyName);
+            console.log('All subjects:', allSubjects);
+            
+            // Lọc an toàn: loại bỏ khoảng trắng thừa
+            let subjects = allSubjects.filter(s => {
+                return s.faculty && s.faculty.trim() === facultyName.trim();
+            });
+            console.log('Filtered subjects:', subjects);
             
             const container = document.getElementById('roleContent');
             container.innerHTML = `
@@ -337,7 +344,7 @@
                 const result = await fetchAPI('/api/subjects', { method: 'POST', body: JSON.stringify(newSub) });
                 if (result.success) {
                     const fresh = await fetchAPI('/api/subjects');
-                    subjects = fresh.filter(s => s.faculty === facultyName);
+                    subjects = fresh.filter(s => s.faculty && s.faculty.trim() === facultyName.trim());
                     renderTable();
                     addModal.classList.remove('active');
                 } else {
@@ -374,7 +381,7 @@
                 };
                 await fetchAPI(`/api/subjects/${id}`, { method: 'PUT', body: JSON.stringify(updatedData) });
                 const fresh = await fetchAPI('/api/subjects');
-                subjects = fresh.filter(s => s.faculty === facultyName);
+                subjects = fresh.filter(s => s.faculty && s.faculty.trim() === facultyName.trim());
                 renderTable();
                 editModal.classList.remove('active');
             };
@@ -383,7 +390,7 @@
                 if (!confirm('Bạn có chắc muốn xóa môn học này?')) return;
                 await fetchAPI(`/api/subjects/${id}`, { method: 'DELETE' });
                 const fresh = await fetchAPI('/api/subjects');
-                subjects = fresh.filter(s => s.faculty === facultyName);
+                subjects = fresh.filter(s => s.faculty && s.faculty.trim() === facultyName.trim());
                 renderTable();
             };
             

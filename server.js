@@ -11,7 +11,8 @@ app.use(express.json());
 
 // ==================== CẤU HÌNH FILE DỮ LIỆU ====================
 const ACCOUNTS_FILE = path.join(__dirname, 'taikhoan.txt');
-const SUBJECTS_FILE = path.join(__dirname, 'monhoc.txt');
+// 🔁 ĐỔI TÊN FILE MÔN HỌC ĐỂ ÉP TẠO MỚI
+const SUBJECTS_FILE = path.join(__dirname, 'monhoc_v2.txt');
 const LOGS_FILE = path.join(__dirname, 'logs.txt');
 const REQUESTS_FILE = path.join(__dirname, 'requests.txt');
 
