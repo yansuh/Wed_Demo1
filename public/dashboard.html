@@ -9,18 +9,12 @@
     <style>
         body { background: #f0f4f8; font-family: system-ui, sans-serif; }
         .card { background: white; border-radius: 1.5rem; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
-        .nav-link { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px; color: #475569; transition: all 0.2s; cursor: pointer; }
-        .nav-link.active { background: #dbeafe; color: #2563eb; font-weight: 600; }
-        .nav-link:hover:not(.active) { background: #f1f5f9; }
-        .btn-primary { background: #2563eb; color: white; padding: 8px 16px; border-radius: 12px; }
-        .btn-danger { background: #fee2e2; color: #dc2626; padding: 8px 16px; border-radius: 12px; }
+        .btn-primary { background: #2563eb; color: white; padding: 8px 16px; border-radius: 12px; border: none; cursor: pointer; }
+        .btn-danger { background: #fee2e2; color: #dc2626; padding: 8px 16px; border-radius: 12px; border: none; cursor: pointer; }
         input, select, textarea { border: 1px solid #e2e8f0; border-radius: 12px; padding: 8px 12px; width: 100%; }
         table { width: 100%; border-collapse: collapse; }
         th { text-align: left; padding: 10px 8px; background: #f8fafc; font-weight: 600; }
         td { padding: 10px 8px; border-bottom: 1px solid #f1f5f9; }
-        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 1000; }
-        .modal.active { display: flex; }
-        .modal-content { background: white; border-radius: 24px; max-width: 500px; width: 90%; padding: 24px; }
     </style>
 </head>
 <body>
@@ -54,21 +48,38 @@
         const API_BASE = window.location.origin;
         let currentUser = null;
 
+        // Hàm gọi API an toàn
         async function fetchAPI(url, options = {}) {
-            const res = await fetch(`${API_BASE}${url}`, {
-                headers: { 'Content-Type': 'application/json' },
-                ...options
-            });
-            return res.json();
+            try {
+                const res = await fetch(`${API_BASE}${url}`, {
+                    headers: { 'Content-Type': 'application/json' },
+                    ...options
+                });
+                if (!res.ok) {
+                    console.error(`API ${url} lỗi ${res.status}`);
+                    return [];
+                }
+                const data = await res.json();
+                return data;
+            } catch (err) {
+                console.error('Lỗi fetchAPI:', err);
+                return [];
+            }
         }
 
-        function escapeHtml(str) { if(!str) return ''; return str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m])); }
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str).replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m]));
+        }
 
+        // Khởi tạo trang
         window.addEventListener('DOMContentLoaded', async () => {
             const userStr = sessionStorage.getItem('loggedUser');
             if (!userStr) { window.location.href = 'login.html'; return; }
             currentUser = JSON.parse(userStr);
+            
             document.getElementById('userFullname').innerHTML = `<i class="fas fa-user-circle mr-1"></i> ${escapeHtml(currentUser.fullName)}`;
+            
             const roleMap = {
                 training: { text:'🏫 Phòng Quản lý SV', bg:'#eff6ff', color:'#2563eb' },
                 admin: { text:'⚙️ Quản trị', bg:'#fff7ed', color:'#d97706' },
@@ -80,161 +91,305 @@
             badge.textContent = r.text; badge.style.backgroundColor = r.bg; badge.style.color = r.color;
 
             await renderPanel();
-            document.getElementById('logoutBtn').onclick = () => { sessionStorage.clear(); window.location.href = 'login.html'; };
+
+            // Gán sự kiện logout an toàn
+            const logoutBtn = document.getElementById('logoutBtn');
+            if (logoutBtn) {
+                logoutBtn.replaceWith(logoutBtn.cloneNode(true));
+                const newLogoutBtn = document.getElementById('logoutBtn');
+                newLogoutBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    if (confirm('Bạn có chắc muốn đăng xuất?')) {
+                        sessionStorage.clear();
+                        window.location.href = 'login.html';
+                    }
+                });
+            }
         });
 
         async function renderPanel() {
             const container = document.getElementById('roleContent');
-            if (currentUser.role === 'training') await renderTrainingPanel();
-            else if (currentUser.role === 'admin') await renderAdminPanel();
-            else if (currentUser.role === 'faculty') await renderFacultyPanel();
-            else if (currentUser.role === 'lecturer') await renderLecturerPanel();
-            else container.innerHTML = '<div class="card p-10 text-center">Không có quyền truy cập</div>';
+            switch (currentUser.role) {
+                case 'training': await renderTrainingPanel(); break;
+                case 'admin': await renderAdminPanel(); break;
+                case 'faculty': await renderFacultyPanel(); break;
+                case 'lecturer': await renderLecturerPanel(); break;
+                default: container.innerHTML = '<div class="card p-10 text-center">Không có quyền truy cập</div>';
+            }
         }
 
-        // ------------------- TRAINING (Phòng quản lý sinh viên) -------------------
-        async function renderTrainingPanel() {
+        // ------------------- LECTURER -------------------
+        async function renderLecturerPanel() {
             const subjects = await fetchAPI('/api/subjects');
+            console.log('Lecturer subjects:', subjects); // Debug
+            
+            const container = document.getElementById('roleContent');
+            container.innerHTML = `
+                <div class="card p-6">
+                    <h2 class="text-xl font-bold">📖 Danh sách môn học</h2>
+                    <input type="text" id="searchInput" placeholder="🔍 Tìm kiếm..." class="my-3 w-full md:w-96 border rounded-xl p-2">
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full">
+                            <thead><tr><th>Tên môn</th><th>Khoa</th><th>Tín chỉ</th><th>Giảng viên</th></tr></thead>
+                            <tbody id="lecturerTable"></tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+            
+            const tbody = document.getElementById('lecturerTable');
+            function renderTable(filter = '') {
+                const filtered = subjects.filter(s => 
+                    (s.name && s.name.toLowerCase().includes(filter)) || 
+                    (s.code && s.code.toLowerCase().includes(filter))
+                );
+                if (filtered.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-gray-500">Không có môn học nào</td></tr>';
+                    return;
+                }
+                tbody.innerHTML = filtered.map(s => `
+                    <tr>
+                        <td>${escapeHtml(s.name)}</td>
+                        <td>${escapeHtml(s.faculty)}</td>
+                        <td>${s.credits}</td>
+                        <td>${escapeHtml(s.lecturer)}</td>
+                    </tr>
+                `).join('');
+            }
+            
+            renderTable();
+            document.getElementById('searchInput').addEventListener('input', e => renderTable(e.target.value.toLowerCase()));
+        }
+
+        // ------------------- FACULTY (Khoa) -------------------
+        async function renderFacultyPanel() {
+            const subjects = await fetchAPI('/api/subjects');
+            console.log('Faculty subjects:', subjects); // Debug
+            
+            const facultyName = currentUser.facultyName;
+            const filtered = subjects.filter(s => s.faculty === facultyName);
+            
+            const container = document.getElementById('roleContent');
+            container.innerHTML = `
+                <div class="card p-6">
+                    <h2 class="text-xl font-bold">📚 Môn học thuộc khoa ${escapeHtml(facultyName)}</h2>
+                    <div class="overflow-x-auto my-4">
+                        <table class="min-w-full">
+                            <thead><tr><th>Tên môn</th><th>Mã</th><th>Tín chỉ</th><th>Giảng viên</th></tr></thead>
+                            <tbody id="facultySubjectTable">
+                                ${filtered.length > 0 
+                                    ? filtered.map(s => `<tr><td>${escapeHtml(s.name)}</td><td>${escapeHtml(s.code)}</td><td>${s.credits}</td><td>${escapeHtml(s.lecturer)}</td></tr>`).join('') 
+                                    : '<tr><td colspan="4" class="text-center py-4 text-gray-500">Chưa có môn học nào</td></tr>'
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="border-t pt-4">
+                        <h3 class="font-semibold">✉️ Gửi yêu cầu cập nhật môn học</h3>
+                        <select id="requestSubject" class="my-2 w-full border rounded-xl p-2">
+                            <option value="">-- Chọn môn --</option>
+                            ${filtered.map(s => `<option value="${s.id}">${escapeHtml(s.name)}</option>`).join('')}
+                        </select>
+                        <textarea id="requestMsg" rows="2" placeholder="Nội dung yêu cầu..." class="mb-2 w-full border rounded-xl p-2"></textarea>
+                        <button id="sendReqBtn" class="btn-primary">Gửi yêu cầu</button>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('sendReqBtn').onclick = async () => {
+                const subjectId = document.getElementById('requestSubject').value;
+                const message = document.getElementById('requestMsg').value.trim();
+                if (!subjectId || !message) return alert('Chọn môn và nhập nội dung');
+                await fetchAPI('/api/requests', { 
+                    method: 'POST', 
+                    body: JSON.stringify({ subjectId, message, requestedBy: currentUser.username }) 
+                });
+                alert('Yêu cầu đã gửi đến Phòng đào tạo');
+                document.getElementById('requestMsg').value = '';
+            };
+        }
+
+        // ------------------- TRAINING (Phòng Quản lý Sinh viên) -------------------
+        async function renderTrainingPanel() {
+            let subjects = await fetchAPI('/api/subjects');
+            console.log('Training subjects:', subjects); // Debug
+            
             const container = document.getElementById('roleContent');
             container.innerHTML = `
                 <div class="card p-6">
                     <h2 class="text-xl font-bold flex gap-2"><i class="fas fa-book-open text-blue-600"></i> Quản lý môn học</h2>
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-2 my-4">
-                        <input id="subName" placeholder="Tên môn">
-                        <select id="subFaculty"><option>Công nghệ thông tin</option><option>Điện - Điện tử</option><option>Kinh tế</option><option>Ngôn ngữ</option></select>
-                        <input id="subCredits" type="number" value="3" placeholder="Số tín chỉ">
-                        <input id="subLecturer" placeholder="Giảng viên">
+                        <input id="subName" placeholder="Tên môn" class="border rounded-xl p-2">
+                        <select id="subFaculty" class="border rounded-xl p-2">
+                            <option>Công nghệ thông tin</option>
+                            <option>Điện - Điện tử</option>
+                            <option>Kinh tế</option>
+                            <option>Ngôn ngữ</option>
+                        </select>
+                        <input id="subCredits" type="number" value="3" placeholder="Số tín chỉ" class="border rounded-xl p-2">
+                        <input id="subLecturer" placeholder="Giảng viên" class="border rounded-xl p-2">
                     </div>
                     <button id="addSubBtn" class="btn-primary mb-4">+ Thêm môn</button>
-                    <div class="overflow-x-auto"><table><thead><tr><th>Mã</th><th>Tên môn</th><th>Khoa</th><th>TC</th><th>Giảng viên</th><th></th></tr></thead><tbody id="subjectsTable"></tbody></table></div>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full">
+                            <thead><tr><th>Mã</th><th>Tên môn</th><th>Khoa</th><th>TC</th><th>Giảng viên</th><th></th></tr></thead>
+                            <tbody id="subjectsTable"></tbody>
+                        </table>
+                    </div>
+                    <div class="mt-6">
+                        <h2 class="text-xl font-bold mb-2">👥 Quản lý tài khoản</h2>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full">
+                                <thead><tr><th>Username</th><th>Họ tên</th><th>Vai trò</th><th></th></tr></thead>
+                                <tbody id="accountsTable"></tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
             `;
+            
+            // Render môn học
             function renderSubjects() {
                 const tbody = document.getElementById('subjectsTable');
+                if (!subjects || subjects.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4">Chưa có môn học</td></tr>';
+                    return;
+                }
                 tbody.innerHTML = subjects.map(s => `
-                    <tr><td>${escapeHtml(s.code)}</td><td>${escapeHtml(s.name)}</td><td>${escapeHtml(s.faculty)}</td><td>${s.credits}</td><td>${escapeHtml(s.lecturer)}</td>
-                    <td><button class="delSubBtn text-red-500" data-id="${s.id}"><i class="fas fa-trash"></i></button></td></tr>
+                    <tr>
+                        <td>${escapeHtml(s.code)}</td>
+                        <td>${escapeHtml(s.name)}</td>
+                        <td>${escapeHtml(s.faculty)}</td>
+                        <td>${s.credits}</td>
+                        <td>${escapeHtml(s.lecturer)}</td>
+                        <td><button class="delSubBtn text-red-500" data-id="${s.id}"><i class="fas fa-trash"></i></button></td>
+                    </tr>
                 `).join('');
+                
                 document.querySelectorAll('.delSubBtn').forEach(btn => btn.onclick = async () => {
-                    if(confirm('Xóa môn học?')) {
+                    if (confirm('Xóa môn học?')) {
                         await fetchAPI(`/api/subjects/${btn.dataset.id}`, { method: 'DELETE' });
                         subjects = await fetchAPI('/api/subjects');
                         renderSubjects();
                     }
                 });
             }
+            
+            // Render tài khoản
+            async function renderAccounts() {
+                const users = await fetchAPI('/api/users');
+                const tbody = document.getElementById('accountsTable');
+                if (!users || users.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" class="text-center py-4">Không có tài khoản</td></tr>';
+                    return;
+                }
+                tbody.innerHTML = users.map(u => `
+                    <tr>
+                        <td>${escapeHtml(u.username)}</td>
+                        <td>${escapeHtml(u.fullName)}</td>
+                        <td>${escapeHtml(u.role)}</td>
+                        <td><button class="delUserBtn text-red-500" data-id="${u.id}"><i class="fas fa-trash"></i></button></td>
+                    </tr>
+                `).join('');
+                
+                document.querySelectorAll('.delUserBtn').forEach(btn => btn.onclick = async () => {
+                    if (confirm('Xóa tài khoản?')) {
+                        await fetchAPI(`/api/users/${btn.dataset.id}`, { method: 'DELETE' });
+                        renderAccounts();
+                    }
+                });
+            }
+            
             renderSubjects();
+            renderAccounts();
+            
             document.getElementById('addSubBtn').onclick = async () => {
+                const name = document.getElementById('subName').value.trim();
+                if (!name) return alert('Nhập tên môn');
                 const newSub = {
                     code: `M${Date.now()}`,
-                    name: document.getElementById('subName').value,
+                    name: name,
                     faculty: document.getElementById('subFaculty').value,
-                    credits: parseInt(document.getElementById('subCredits').value),
-                    lecturer: document.getElementById('subLecturer').value,
+                    credits: parseInt(document.getElementById('subCredits').value) || 3,
+                    lecturer: document.getElementById('subLecturer').value.trim() || 'Chưa phân công',
                     status: 'active'
                 };
-                if(!newSub.name) return alert('Nhập tên môn');
                 await fetchAPI('/api/subjects', { method: 'POST', body: JSON.stringify(newSub) });
                 subjects = await fetchAPI('/api/subjects');
                 renderSubjects();
                 document.getElementById('subName').value = '';
+                document.getElementById('subLecturer').value = '';
             };
         }
 
         // ------------------- ADMIN -------------------
         async function renderAdminPanel() {
             let users = await fetchAPI('/api/users');
+            console.log('Admin users:', users); // Debug
+            
             const container = document.getElementById('roleContent');
             container.innerHTML = `
                 <div class="card p-6">
                     <h2 class="text-xl font-bold">👑 Quản trị tài khoản</h2>
                     <div class="flex flex-wrap gap-2 my-4">
-                        <input id="newUsername" placeholder="Tên đăng nhập">
-                        <input id="newFullname" placeholder="Họ tên">
-                        <select id="newRole"><option>training</option><option>faculty</option><option>lecturer</option><option>admin</option></select>
+                        <input id="newUsername" placeholder="Tên đăng nhập" class="border rounded-xl p-2">
+                        <input id="newFullname" placeholder="Họ tên" class="border rounded-xl p-2">
+                        <select id="newRole" class="border rounded-xl p-2">
+                            <option>training</option><option>faculty</option><option>lecturer</option><option>admin</option>
+                        </select>
                         <button id="addUserBtn" class="btn-primary">Thêm</button>
                     </div>
-                    <div class="overflow-x-auto"><table><thead><tr><th>Username</th><th>Họ tên</th><th>Vai trò</th><th>Khoa/Bộ môn</th><th></th></tr></thead><tbody id="userTable"></tbody></table></div>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full">
+                            <thead><tr><th>Username</th><th>Họ tên</th><th>Vai trò</th><th>Khoa/Bộ môn</th><th></th></tr></thead>
+                            <tbody id="userTable"></tbody>
+                        </table>
+                    </div>
                 </div>
             `;
+            
             function renderUsers() {
                 const tbody = document.getElementById('userTable');
+                if (!users || users.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4">Không có tài khoản</td></tr>';
+                    return;
+                }
                 tbody.innerHTML = users.map(u => `
-                    <tr><td>${escapeHtml(u.username)}</td><td>${escapeHtml(u.fullName)}</td><td>${escapeHtml(u.role)}</td><td>${escapeHtml(u.facultyName || u.department || '')}</td>
-                    <td><button class="delUserBtn text-red-500" data-id="${u.id}"><i class="fas fa-trash"></i></button></td></tr>
+                    <tr>
+                        <td>${escapeHtml(u.username)}</td>
+                        <td>${escapeHtml(u.fullName)}</td>
+                        <td>${escapeHtml(u.role)}</td>
+                        <td>${escapeHtml(u.facultyName || u.department || '')}</td>
+                        <td><button class="delUserBtn text-red-500" data-id="${u.id}"><i class="fas fa-trash"></i></button></td>
+                    </tr>
                 `).join('');
+                
                 document.querySelectorAll('.delUserBtn').forEach(btn => btn.onclick = async () => {
-                    if(confirm('Xóa tài khoản?')) {
+                    if (confirm('Xóa tài khoản?')) {
                         await fetchAPI(`/api/users/${btn.dataset.id}`, { method: 'DELETE' });
                         users = await fetchAPI('/api/users');
                         renderUsers();
                     }
                 });
             }
+            
             renderUsers();
+            
             document.getElementById('addUserBtn').onclick = async () => {
+                const username = document.getElementById('newUsername').value.trim();
+                const fullName = document.getElementById('newFullname').value.trim();
+                if (!username || !fullName) return alert('Nhập đủ thông tin');
                 const newUser = {
-                    username: document.getElementById('newUsername').value,
-                    fullName: document.getElementById('newFullname').value,
+                    username, fullName,
                     role: document.getElementById('newRole').value,
                     password: '123'
                 };
-                if(!newUser.username || !newUser.fullName) return alert('Nhập đủ thông tin');
                 await fetchAPI('/api/users', { method: 'POST', body: JSON.stringify(newUser) });
                 users = await fetchAPI('/api/users');
                 renderUsers();
+                document.getElementById('newUsername').value = '';
+                document.getElementById('newFullname').value = '';
             };
-        }
-
-        // ------------------- FACULTY (Khoa) -------------------
-        async function renderFacultyPanel() {
-            const subjects = await fetchAPI('/api/subjects');
-            const facultyName = currentUser.facultyName;
-            const filtered = subjects.filter(s => s.faculty === facultyName);
-            const container = document.getElementById('roleContent');
-            container.innerHTML = `
-                <div class="card p-6">
-                    <h2 class="text-xl font-bold">📚 Môn học thuộc khoa ${escapeHtml(facultyName)}</h2>
-                    <div class="overflow-x-auto my-4"><table><thead><tr><th>Tên môn</th><th>Mã</th><th>Tín chỉ</th><th>Giảng viên</th></tr></thead><tbody>
-                        ${filtered.map(s => `<tr><td>${escapeHtml(s.name)}</td><td>${escapeHtml(s.code)}</td><td>${s.credits}</td><td>${escapeHtml(s.lecturer)}</td></tr>`).join('')}
-                    </tbody></table></div>
-                    <div class="border-t pt-4">
-                        <h3 class="font-semibold">✉️ Gửi yêu cầu cập nhật môn học</h3>
-                        <select id="requestSubject" class="my-2"><option value="">-- Chọn môn --</option>${filtered.map(s => `<option value="${s.id}">${escapeHtml(s.name)}</option>`).join('')}</select>
-                        <textarea id="requestMsg" rows="2" placeholder="Nội dung yêu cầu..." class="mb-2"></textarea>
-                        <button id="sendReqBtn" class="btn-primary">Gửi yêu cầu</button>
-                    </div>
-                </div>
-            `;
-            document.getElementById('sendReqBtn').onclick = async () => {
-                const subjectId = document.getElementById('requestSubject').value;
-                const message = document.getElementById('requestMsg').value;
-                if(!subjectId || !message) return alert('Chọn môn và nhập nội dung');
-                await fetchAPI('/api/requests', { method: 'POST', body: JSON.stringify({ subjectId, message, requestedBy: currentUser.username }) });
-                alert('Yêu cầu đã gửi đến Phòng đào tạo');
-                document.getElementById('requestMsg').value = '';
-            };
-        }
-
-        // ------------------- LECTURER -------------------
-        async function renderLecturerPanel() {
-            const subjects = await fetchAPI('/api/subjects');
-            const container = document.getElementById('roleContent');
-            container.innerHTML = `
-                <div class="card p-6">
-                    <h2 class="text-xl font-bold">📖 Danh sách môn học</h2>
-                    <input type="text" id="searchInput" placeholder="🔍 Tìm kiếm..." class="my-3">
-                    <div class="overflow-x-auto"><table><thead><tr><th>Tên môn</th><th>Khoa</th><th>Tín chỉ</th><th>Giảng viên</th></tr></thead><tbody id="lecturerTable"></tbody></table></div>
-                </div>
-            `;
-            function render(filter = '') {
-                const filtered = subjects.filter(s => s.name.toLowerCase().includes(filter) || s.code.toLowerCase().includes(filter));
-                document.getElementById('lecturerTable').innerHTML = filtered.map(s => `
-                    <tr><td>${escapeHtml(s.name)}</td><td>${escapeHtml(s.faculty)}</td><td>${s.credits}</td><td>${escapeHtml(s.lecturer)}</td></tr>
-                `).join('');
-            }
-            render();
-            document.getElementById('searchInput').addEventListener('input', e => render(e.target.value.toLowerCase()));
         }
     </script>
 </body>
