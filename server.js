@@ -6,11 +6,10 @@ const cors = require('cors');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware
 app.use(cors());
 app.use(express.json());
 
-// ==================== ĐỌC/GHI FILE AN TOÀN ====================
+// ==================== CẤU HÌNH FILE DỮ LIỆU ====================
 const ACCOUNTS_FILE = path.join(__dirname, 'taikhoan.txt');
 const SUBJECTS_FILE = path.join(__dirname, 'monhoc.txt');
 const LOGS_FILE = path.join(__dirname, 'logs.txt');
@@ -29,7 +28,7 @@ function readFileJSON(file, defaultVal) {
         }
         return JSON.parse(data);
     } catch (err) {
-        console.error(`Lỗi đọc file ${file}:`, err.message);
+        console.error(`Lỗi đọc ${file}:`, err.message);
         return defaultVal;
     }
 }
@@ -38,11 +37,10 @@ function writeFileJSON(file, data) {
     try {
         fs.writeFileSync(file, JSON.stringify(data, null, 2), 'utf8');
     } catch (err) {
-        console.error(`Lỗi ghi file ${file}:`, err.message);
+        console.error(`Lỗi ghi ${file}:`, err.message);
     }
 }
 
-// ==================== KHỞI TẠO DỮ LIỆU ====================
 let accounts = readFileJSON(ACCOUNTS_FILE, []);
 let subjects = readFileJSON(SUBJECTS_FILE, []);
 let logs = readFileJSON(LOGS_FILE, []);
@@ -60,67 +58,88 @@ function addLog(action, username = 'System') {
     saveLogs();
 }
 
-// 1. Dữ liệu Tài khoản chuẩn (Đã có Nguyễn Quý Thành, Trần Văn Tiến...)
+// ==================== DỮ LIỆU MẪU ====================
+const DEFAULT_ACCOUNTS = [
+    { id: 1, username: 'admin', password: 'Admin123@', fullName: 'Quản trị hệ thống', role: 'admin' },
+    { id: 2, username: 'phongdaotao', password: '123', fullName: 'Phòng Quản lý Sinh viên', role: 'training' },
+    { id: 3, username: 'khoa_cntt', password: '123', fullName: 'Khoa Công nghệ thông tin', role: 'faculty', facultyName: 'Công nghệ thông tin' },
+    { id: 4, username: 'khoa_dientu', password: '123', fullName: 'Khoa Điện - Điện tử', role: 'faculty', facultyName: 'Điện - Điện tử' },
+    { id: 5, username: 'khoa_kinhte', password: '123', fullName: 'Khoa Kinh tế', role: 'faculty', facultyName: 'Kinh tế' },
+    { id: 6, username: 'khoa_ngonngu', password: '123', fullName: 'Khoa Ngôn ngữ', role: 'faculty', facultyName: 'Ngôn ngữ' },
+    { id: 7, username: 'giangvien_cntt', password: '123', fullName: 'Nguyễn Văn A', role: 'lecturer', department: 'Công nghệ thông tin' },
+    { id: 8, username: 'giangvien_kinhte', password: '123', fullName: 'Trần Thị B', role: 'lecturer', department: 'Kinh tế' }
+];
+
+const DEFAULT_SUBJECTS = [
+    // CNTT
+    { id: 1, code: 'CS101', name: 'Nhập môn lập trình', faculty: 'Công nghệ thông tin', credits: 3, lecturer: 'ThS. Nguyễn Văn An', status: 'active' },
+    { id: 2, code: 'CS102', name: 'Cấu trúc dữ liệu và giải thuật', faculty: 'Công nghệ thông tin', credits: 4, lecturer: 'TS. Trần Minh Tuấn', status: 'active' },
+    { id: 3, code: 'CS201', name: 'Lập trình hướng đối tượng', faculty: 'Công nghệ thông tin', credits: 3, lecturer: 'PGS. Lê Thị Hương', status: 'active' },
+    { id: 4, code: 'CS202', name: 'Cơ sở dữ liệu', faculty: 'Công nghệ thông tin', credits: 4, lecturer: 'ThS. Phạm Văn Hùng', status: 'active' },
+    { id: 5, code: 'CS301', name: 'Mạng máy tính', faculty: 'Công nghệ thông tin', credits: 3, lecturer: 'TS. Nguyễn Hoàng Nam', status: 'active' },
+    { id: 6, code: 'CS302', name: 'Hệ điều hành', faculty: 'Công nghệ thông tin', credits: 3, lecturer: 'ThS. Vũ Thị Lan', status: 'active' },
+    { id: 7, code: 'CS401', name: 'Trí tuệ nhân tạo', faculty: 'Công nghệ thông tin', credits: 3, lecturer: 'GS. Trần Đình Long', status: 'active' },
+    { id: 8, code: 'CS402', name: 'An toàn bảo mật thông tin', faculty: 'Công nghệ thông tin', credits: 3, lecturer: 'TS. Lê Minh Đức', status: 'active' },
+    // Điện - Điện tử
+    { id: 9, code: 'EE101', name: 'Lý thuyết mạch điện', faculty: 'Điện - Điện tử', credits: 3, lecturer: 'PGS. Nguyễn Đức Thắng', status: 'active' },
+    { id: 10, code: 'EE102', name: 'Điện tử cơ bản', faculty: 'Điện - Điện tử', credits: 3, lecturer: 'ThS. Phạm Thị Mai', status: 'active' },
+    { id: 11, code: 'EE201', name: 'Vi xử lý - Vi điều khiển', faculty: 'Điện - Điện tử', credits: 4, lecturer: 'TS. Trần Quang Huy', status: 'active' },
+    { id: 12, code: 'EE202', name: 'Kỹ thuật đo lường', faculty: 'Điện - Điện tử', credits: 3, lecturer: 'ThS. Lê Văn Thành', status: 'active' },
+    { id: 13, code: 'EE301', name: 'Hệ thống cung cấp điện', faculty: 'Điện - Điện tử', credits: 3, lecturer: 'TS. Hoàng Minh Tuấn', status: 'active' },
+    { id: 14, code: 'EE302', name: 'Truyền động điện', faculty: 'Điện - Điện tử', credits: 3, lecturer: 'ThS. Nguyễn Thị Hoa', status: 'active' },
+    // Kinh tế
+    { id: 15, code: 'EC101', name: 'Kinh tế vi mô', faculty: 'Kinh tế', credits: 3, lecturer: 'TS. Phạm Thị Dung', status: 'active' },
+    { id: 16, code: 'EC102', name: 'Kinh tế vĩ mô', faculty: 'Kinh tế', credits: 3, lecturer: 'TS. Hoàng Văn Em', status: 'active' },
+    { id: 17, code: 'EC201', name: 'Nguyên lý kế toán', faculty: 'Kinh tế', credits: 3, lecturer: 'ThS. Trần Thị Kim', status: 'active' },
+    { id: 18, code: 'EC202', name: 'Marketing căn bản', faculty: 'Kinh tế', credits: 3, lecturer: 'PGS. Lê Văn Phúc', status: 'active' },
+    { id: 19, code: 'EC301', name: 'Tài chính doanh nghiệp', faculty: 'Kinh tế', credits: 3, lecturer: 'TS. Nguyễn Hữu Thọ', status: 'active' },
+    { id: 20, code: 'EC302', name: 'Quản trị học', faculty: 'Kinh tế', credits: 3, lecturer: 'ThS. Phạm Anh Tuấn', status: 'active' },
+    { id: 21, code: 'EC401', name: 'Kinh tế quốc tế', faculty: 'Kinh tế', credits: 3, lecturer: 'TS. Lê Thị Hồng', status: 'active' },
+    { id: 22, code: 'EC402', name: 'Thương mại điện tử', faculty: 'Kinh tế', credits: 3, lecturer: 'ThS. Trần Minh Hoàng', status: 'active' },
+    // Ngôn ngữ
+    { id: 23, code: 'FL101', name: 'Tiếng Anh cơ bản 1', faculty: 'Ngôn ngữ', credits: 3, lecturer: 'Cô Sarah Johnson', status: 'active' },
+    { id: 24, code: 'FL102', name: 'Tiếng Anh cơ bản 2', faculty: 'Ngôn ngữ', credits: 3, lecturer: 'Thầy David Smith', status: 'active' },
+    { id: 25, code: 'FL201', name: 'Tiếng Anh thương mại', faculty: 'Ngôn ngữ', credits: 3, lecturer: 'Cô Emily Davis', status: 'active' },
+    { id: 26, code: 'FL202', name: 'Tiếng Trung cơ bản', faculty: 'Ngôn ngữ', credits: 3, lecturer: 'ThS. Lý Minh', status: 'active' },
+    { id: 27, code: 'FL301', name: 'Tiếng Hàn cơ bản', faculty: 'Ngôn ngữ', credits: 3, lecturer: 'Cô Park Ji Yeon', status: 'active' },
+    { id: 28, code: 'FL302', name: 'Ngữ âm học', faculty: 'Ngôn ngữ', credits: 2, lecturer: 'TS. Nguyễn Thị Lan', status: 'active' },
+    // GDTC (cho mỗi khoa)
+    { id: 29, code: 'PE_CNTT', name: 'Giáo dục thể chất', faculty: 'Công nghệ thông tin', credits: 2, lecturer: 'ThS. Nguyễn Văn Khỏe', status: 'active' },
+    { id: 30, code: 'PE_DT', name: 'Giáo dục thể chất', faculty: 'Điện - Điện tử', credits: 2, lecturer: 'ThS. Nguyễn Văn Khỏe', status: 'active' },
+    { id: 31, code: 'PE_KT', name: 'Giáo dục thể chất', faculty: 'Kinh tế', credits: 2, lecturer: 'ThS. Nguyễn Văn Khỏe', status: 'active' },
+    { id: 32, code: 'PE_NN', name: 'Giáo dục thể chất', faculty: 'Ngôn ngữ', credits: 2, lecturer: 'ThS. Nguyễn Văn Khỏe', status: 'active' },
+    // GDQP (cho mỗi khoa)
+    { id: 33, code: 'QP_CNTT', name: 'Giáo dục quốc phòng an ninh', faculty: 'Công nghệ thông tin', credits: 3, lecturer: 'Đại tá Trần Quốc Bảo', status: 'active' },
+    { id: 34, code: 'QP_DT', name: 'Giáo dục quốc phòng an ninh', faculty: 'Điện - Điện tử', credits: 3, lecturer: 'Đại tá Trần Quốc Bảo', status: 'active' },
+    { id: 35, code: 'QP_KT', name: 'Giáo dục quốc phòng an ninh', faculty: 'Kinh tế', credits: 3, lecturer: 'Đại tá Trần Quốc Bảo', status: 'active' },
+    { id: 36, code: 'QP_NN', name: 'Giáo dục quốc phòng an ninh', faculty: 'Ngôn ngữ', credits: 3, lecturer: 'Đại tá Trần Quốc Bảo', status: 'active' },
+    // Kỹ năng mềm (cho mỗi khoa)
+    { id: 37, code: 'GEN101', name: 'Kỹ năng mềm', faculty: 'Công nghệ thông tin', credits: 2, lecturer: 'ThS. Lê Thị Hạnh', status: 'active' },
+    { id: 38, code: 'GEN101', name: 'Kỹ năng mềm', faculty: 'Điện - Điện tử', credits: 2, lecturer: 'ThS. Lê Thị Hạnh', status: 'active' },
+    { id: 39, code: 'GEN101', name: 'Kỹ năng mềm', faculty: 'Kinh tế', credits: 2, lecturer: 'ThS. Lê Thị Hạnh', status: 'active' },
+    { id: 40, code: 'GEN101', name: 'Kỹ năng mềm', faculty: 'Ngôn ngữ', credits: 2, lecturer: 'ThS. Lê Thị Hạnh', status: 'active' }
+];
+
 if (accounts.length === 0) {
-    accounts = [
-        { id: 1, username: 'admin', password: 'Admin123@', fullName: 'Quản trị hệ thống', role: 'admin' },
-        { id: 2, username: 'phongdaotao', password: '123456Ak@', fullName: 'Phòng Quản lý Sinh viên', role: 'training' },
-        { id: 3, username: 'khoa_cntt', password: '123456Ak@', fullName: 'Khoa Công nghệ thông tin', role: 'faculty', facultyName: 'Công nghệ thông tin' },
-        { id: 4, username: 'khoa_dientu', password: '123456Ak@', fullName: 'Khoa Điện - Điện tử', role: 'faculty', facultyName: 'Điện - Điện tử' },
-        { id: 5, username: 'khoa_kinhte', password: '123456Ak@', fullName: 'Khoa Kinh tế', role: 'faculty', facultyName: 'Kinh tế' },
-        { id: 6, username: 'khoa_ngonngu', password: '123456Ak@', fullName: 'Khoa Ngôn ngữ', role: 'faculty', facultyName: 'Ngôn ngữ' },
-        { id: 7, username: 'TranVanTien', password: '123456Ak@', fullName: 'Trần Văn Tiến', role: 'lecturer', department: 'Công nghệ thông tin' },
-        { id: 8, username: 'NguyenQuyThanh', password: '123456Ak@', fullName: 'Nguyễn Quý Thành', role: 'lecturer', department: 'Điện - Điện tử' },
-        { id: 9, username: 'NguyenVietTruong', password: '123456Ak@', fullName: 'Nguyễn Việt Trường', role: 'lecturer', department: 'Ngôn ngữ' }
-    ];
+    accounts = DEFAULT_ACCOUNTS;
     saveAccounts();
 }
-
-// 2. Dữ liệu Môn học chuẩn (15 môn, Khoa là mảng [])
 if (subjects.length === 0) {
-    subjects = [
-        { id: 1, code: 'CS101', name: 'Lập trình Web nâng cao', faculty: ['Công nghệ thông tin'], credits: 3, lecturer: 'TS. Nguyễn Văn A', status: 'active' },
-        { id: 2, code: 'EE201', name: 'Mạch điện tử', faculty: ['Điện - Điện tử'], credits: 4, lecturer: 'ThS. Trần Văn B', status: 'active' },
-        { id: 3, code: 'EC101', name: 'Kinh tế vi mô', faculty: ['Kinh tế'], credits: 3, lecturer: 'PGS. Lê Thị C', status: 'active' },
-        { id: 4, code: 'FL101', name: 'Tiếng Anh chuyên ngành', faculty: ['Ngôn ngữ'], credits: 5, lecturer: 'Sarah Johnson', status: 'active' },
-        { id: 5, code: 'CS102', name: 'Phân tích thiết kế hệ thống', faculty: ['Công nghệ thông tin'], credits: 2, lecturer: 'TS. Nguyễn Văn A', status: 'active' },
-        { id: 6, code: 'EE107', name: 'Bảo trì hệ thống điện', faculty: ['Điện - Điện tử'], credits: 3, lecturer: 'Nguyễn Văn C', status: 'active' },
-        { id: 7, code: 'DE100', name: 'Giáo dục thể chất', faculty: ['Điện - Điện tử', 'Công nghệ thông tin', 'Ngôn ngữ', 'Kinh tế'], credits: 3, lecturer: 'Nguyễn Văn C', status: 'active' },
-        { id: 8, code: 'MATH101', name: 'Toán cao cấp A1', faculty: ['Công nghệ thông tin', 'Điện - Điện tử'], credits: 3, lecturer: 'TS. Trần Thị Toán', status: 'active' },
-        { id: 9, code: 'CS201', name: 'Cơ sở dữ liệu', faculty: ['Công nghệ thông tin'], credits: 3, lecturer: 'ThS. Lê Cơ Sở', status: 'active' },
-        { id: 10, code: 'EC102', name: 'Kinh tế vĩ mô', faculty: ['Kinh tế'], credits: 3, lecturer: 'TS. Phạm Kinh Tế', status: 'active' },
-        { id: 11, code: 'FL202', name: 'Tiếng Nhật giao tiếp 1', faculty: ['Ngôn ngữ'], credits: 4, lecturer: 'Yamada Yuki', status: 'active' },
-        { id: 12, code: 'EE305', name: 'Vi điều khiển và Ứng dụng', faculty: ['Điện - Điện tử'], credits: 3, lecturer: 'ThS. Hoàng Vi Mạch', status: 'active' },
-        { id: 13, code: 'SKILL101', name: 'Kỹ năng giao tiếp', faculty: ['Kinh tế', 'Ngôn ngữ', 'Công nghệ thông tin'], credits: 2, lecturer: 'ThS. Nguyễn Kỹ Năng', status: 'active' },
-        { id: 14, code: 'CS302', name: 'Trí tuệ nhân tạo', faculty: ['Công nghệ thông tin'], credits: 3, lecturer: 'PGS. Robot Nguyễn', status: 'active' },
-        { id: 15, code: 'LAW101', name: 'Pháp luật đại cương', faculty: ['Điện - Điện tử', 'Công nghệ thông tin', 'Ngôn ngữ', 'Kinh tế'], credits: 2, lecturer: 'Luật sư Trần Văn Luật', status: 'active' }
-    ];
+    subjects = DEFAULT_SUBJECTS;
     saveSubjects();
 }
+if (logs.length === 0) addLog('Khởi tạo hệ thống với dữ liệu mẫu mở rộng');
 
-if (logs.length === 0) addLog('Khởi tạo hệ thống');
+console.log(`📊 Tài khoản: ${accounts.length}, Môn học: ${subjects.length}`);
 
-// ==================== ROUTES TRANG TĨNH (ĐÃ SỬA LỖI ĐƯỜNG DẪN PUBLIC) ====================
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'login.html'));
-});
+// ==================== ROUTES TRANG TĨNH ====================
+app.use(express.static(__dirname, { index: false }));
+app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'login.html')));
+app.get('/login', (req, res) => res.sendFile(path.join(__dirname, 'login.html')));
+app.get('/register', (req, res) => res.sendFile(path.join(__dirname, 'register.html')));
+app.get('/dashboard', (req, res) => res.sendFile(path.join(__dirname, 'dashboard.html')));
 
-app.get('/dashboard', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
-});
-
-app.use(express.static(path.join(__dirname, 'public'), {
-    index: false,
-    setHeaders: (res, filepath) => {
-        if (filepath.endsWith('.js')) {
-            res.setHeader('Content-Type', 'application/javascript');
-        } else if (filepath.endsWith('.css')) {
-            res.setHeader('Content-Type', 'text/css');
-        }
-    }
-}));
-
-// ==================== API ENDPOINTS ====================
+// ==================== API ====================
 app.get('/health', (req, res) => res.json({ status: 'OK' }));
 
 app.post('/api/login', (req, res) => {
@@ -154,18 +173,11 @@ app.post('/api/register', (req, res) => {
     res.json({ success: true });
 });
 
-// --- Quản lý Môn học ---
 app.get('/api/subjects', (req, res) => res.json(subjects));
 
 app.post('/api/subjects', (req, res) => {
     const newId = subjects.length > 0 ? Math.max(...subjects.map(s => s.id)) + 1 : 1;
     const newSub = { id: newId, ...req.body, status: 'active' };
-    
-    // Tự động bọc faculty thành mảng nếu bị gửi lên dạng chuỗi
-    if (typeof newSub.faculty === 'string') {
-        newSub.faculty = [newSub.faculty];
-    }
-
     subjects.push(newSub);
     saveSubjects();
     addLog(`Thêm môn học: ${newSub.name}`, req.body.username || 'System');
@@ -176,12 +188,7 @@ app.put('/api/subjects/:id', (req, res) => {
     const id = parseInt(req.params.id);
     const index = subjects.findIndex(s => s.id === id);
     if (index !== -1) {
-        const updatedData = { ...req.body };
-        if (typeof updatedData.faculty === 'string') {
-            updatedData.faculty = [updatedData.faculty];
-        }
-
-        subjects[index] = { ...subjects[index], ...updatedData };
+        subjects[index] = { ...subjects[index], ...req.body };
         saveSubjects();
         addLog(`Cập nhật môn học: ${subjects[index].name}`, req.body.username || 'System');
         res.json({ success: true });
@@ -199,7 +206,6 @@ app.delete('/api/subjects/:id', (req, res) => {
     res.json({ success: true });
 });
 
-// --- Quản lý Tài khoản ---
 app.get('/api/users', (req, res) => {
     const safeUsers = accounts.map(({ id, username, fullName, role, facultyName, department }) =>
         ({ id, username, fullName, role, facultyName, department }));
@@ -243,7 +249,6 @@ app.delete('/api/users/:id', (req, res) => {
     res.json({ success: true });
 });
 
-// --- Quản lý Logs & Requests ---
 app.get('/api/logs', (req, res) => res.json(logs.slice(0, 50)));
 app.get('/api/requests', (req, res) => res.json(requests));
 
@@ -269,15 +274,9 @@ app.put('/api/requests/:id', (req, res) => {
     }
 });
 
-app.get('*', (req, res) => {
-    if (req.path.includes('.')) {
-        return res.status(404).send('File not found');
-    }
+app.use((req, res) => {
+    if (path.extname(req.path)) return res.status(404).send('File not found');
     res.redirect('/');
 });
 
-
-app.listen(PORT, '0.0.0.0', () => {
-    console.log(` Server đang chạy tại port ${PORT}`);
-    console.log(` Tài khoản: ${accounts.length}, Môn học: ${subjects.length}`);
-});
+app.listen(PORT, '0.0.0.0', () => console.log(`✅ Server chạy tại port ${PORT}`));
