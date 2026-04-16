@@ -6,12 +6,15 @@
     <title>Dashboard · Quản lý Học vụ</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Style chung (nếu có) -->
+    <link rel="stylesheet" href="css/style.css">
     <style>
         body { background: #f0f4f8; font-family: system-ui, sans-serif; }
         .card { background: white; border-radius: 1.5rem; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
         .btn-primary { background: #2563eb; color: white; padding: 8px 16px; border-radius: 12px; border: none; cursor: pointer; }
         .btn-danger { background: #fee2e2; color: #dc2626; padding: 8px 16px; border-radius: 12px; border: none; cursor: pointer; }
         .btn-warning { background: #fef3c7; color: #d97706; padding: 8px 16px; border-radius: 12px; border: none; cursor: pointer; }
+        .btn-success { background: #10b981; color: white; padding: 8px 16px; border-radius: 12px; border: none; cursor: pointer; }
         input, select, textarea { border: 1px solid #e2e8f0; border-radius: 12px; padding: 8px 12px; width: 100%; }
         table { width: 100%; border-collapse: collapse; }
         th { text-align: left; padding: 10px 8px; background: #f8fafc; font-weight: 600; }
@@ -48,7 +51,36 @@
         <div id="roleContent"></div>
     </div>
 
-    <!-- Modal sửa môn học (dùng cho Faculty) -->
+    <!-- Modal thêm môn học (dùng chung cho Faculty) -->
+    <div id="addSubjectModal" class="modal">
+        <div class="modal-content">
+            <h3 class="text-lg font-bold mb-4">➕ Thêm môn học mới</h3>
+            <form id="addSubjectForm">
+                <div class="mb-3">
+                    <label class="block text-sm font-medium mb-1">Tên môn học</label>
+                    <input type="text" id="addSubjectName" class="border rounded-xl p-2 w-full" required>
+                </div>
+                <div class="mb-3">
+                    <label class="block text-sm font-medium mb-1">Mã môn (tự động hoặc nhập)</label>
+                    <input type="text" id="addSubjectCode" class="border rounded-xl p-2 w-full" placeholder="VD: CS101">
+                </div>
+                <div class="mb-3">
+                    <label class="block text-sm font-medium mb-1">Số tín chỉ</label>
+                    <input type="number" id="addSubjectCredits" class="border rounded-xl p-2 w-full" min="1" value="3" required>
+                </div>
+                <div class="mb-3">
+                    <label class="block text-sm font-medium mb-1">Giảng viên phụ trách</label>
+                    <input type="text" id="addSubjectLecturer" class="border rounded-xl p-2 w-full" placeholder="Tên giảng viên">
+                </div>
+                <div class="flex gap-2 justify-end">
+                    <button type="button" id="cancelAddBtn" class="px-4 py-2 border rounded-xl">Hủy</button>
+                    <button type="submit" class="btn-primary">Thêm môn</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal sửa môn học -->
     <div id="editSubjectModal" class="modal">
         <div class="modal-content">
             <h3 class="text-lg font-bold mb-4">✏️ Chỉnh sửa môn học</h3>
@@ -88,7 +120,10 @@
                     headers: { 'Content-Type': 'application/json' },
                     ...options
                 });
-                if (!res.ok) throw new Error(`Status ${res.status}`);
+                if (!res.ok) {
+                    console.error(`API ${url} lỗi ${res.status}`);
+                    return [];
+                }
                 return await res.json();
             } catch (err) {
                 console.error('Lỗi fetchAPI:', err);
@@ -147,7 +182,6 @@
         // ------------------- LECTURER (Chỉ xem môn thuộc khoa của mình) -------------------
         async function renderLecturerPanel() {
             const allSubjects = await fetchAPI('/api/subjects');
-            // Lọc theo department của giảng viên
             const lecturerDept = currentUser.department || '';
             const subjects = allSubjects.filter(s => s.faculty === lecturerDept);
             
@@ -188,7 +222,7 @@
             document.getElementById('searchInput').addEventListener('input', e => renderTable(e.target.value.toLowerCase()));
         }
 
-        // ------------------- FACULTY (Khoa) - Có quyền sửa môn -------------------
+        // ------------------- FACULTY (Khoa) - Có quyền thêm, sửa môn -------------------
         async function renderFacultyPanel() {
             const allSubjects = await fetchAPI('/api/subjects');
             const facultyName = currentUser.facultyName;
@@ -197,7 +231,10 @@
             const container = document.getElementById('roleContent');
             container.innerHTML = `
                 <div class="card p-6">
-                    <h2 class="text-xl font-bold">📚 Quản lý môn học - Khoa ${escapeHtml(facultyName)}</h2>
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xl font-bold">📚 Quản lý môn học - Khoa ${escapeHtml(facultyName)}</h2>
+                        <button id="showAddModalBtn" class="btn-success"><i class="fas fa-plus mr-1"></i> Thêm môn học</button>
+                    </div>
                     <div class="overflow-x-auto my-4">
                         <table class="min-w-full">
                             <thead><tr><th>Tên môn</th><th>Mã</th><th>Tín chỉ</th><th>Giảng viên</th><th>Thao tác</th></tr></thead>
@@ -231,6 +268,7 @@
                         <td>${escapeHtml(s.lecturer)}</td>
                         <td>
                             <button class="editSubBtn text-blue-600 mr-2" data-id="${s.id}"><i class="fas fa-edit"></i> Sửa</button>
+                            <button class="deleteSubBtn text-red-500" data-id="${s.id}"><i class="fas fa-trash"></i> Xóa</button>
                         </td>
                     </tr>
                 `).join('');
@@ -240,14 +278,63 @@
                 document.querySelectorAll('.editSubBtn').forEach(btn => {
                     btn.onclick = () => openEditModal(parseInt(btn.dataset.id));
                 });
+                document.querySelectorAll('.deleteSubBtn').forEach(btn => {
+                    btn.onclick = () => deleteSubject(parseInt(btn.dataset.id));
+                });
             }
             
             renderTable();
+
+            // Modal thêm môn học
+            const addModal = document.getElementById('addSubjectModal');
+            const cancelAddBtn = document.getElementById('cancelAddBtn');
+            const addForm = document.getElementById('addSubjectForm');
             
-            // Modal chỉnh sửa
-            const modal = document.getElementById('editSubjectModal');
-            const cancelBtn = document.getElementById('cancelEditBtn');
-            const form = document.getElementById('editSubjectForm');
+            document.getElementById('showAddModalBtn').onclick = () => {
+                // Tạo mã môn tự động (có thể sửa)
+                document.getElementById('addSubjectCode').value = `MH${Date.now().toString().slice(-6)}`;
+                document.getElementById('addSubjectName').value = '';
+                document.getElementById('addSubjectCredits').value = 3;
+                document.getElementById('addSubjectLecturer').value = '';
+                addModal.classList.add('active');
+            };
+            
+            cancelAddBtn.onclick = () => addModal.classList.remove('active');
+            addModal.onclick = (e) => { if (e.target === addModal) addModal.classList.remove('active'); };
+            
+            addForm.onsubmit = async (e) => {
+                e.preventDefault();
+                const name = document.getElementById('addSubjectName').value.trim();
+                const code = document.getElementById('addSubjectCode').value.trim();
+                const credits = parseInt(document.getElementById('addSubjectCredits').value);
+                const lecturer = document.getElementById('addSubjectLecturer').value.trim();
+                
+                if (!name) return alert('Vui lòng nhập tên môn học');
+                
+                const newSub = {
+                    code: code || `MH${Date.now().toString().slice(-6)}`,
+                    name,
+                    faculty: facultyName,
+                    credits,
+                    lecturer: lecturer || 'Chưa phân công',
+                    status: 'active'
+                };
+                
+                const result = await fetchAPI('/api/subjects', { method: 'POST', body: JSON.stringify(newSub) });
+                if (result.success) {
+                    const fresh = await fetchAPI('/api/subjects');
+                    subjects = fresh.filter(s => s.faculty === facultyName);
+                    renderTable();
+                    addModal.classList.remove('active');
+                } else {
+                    alert('Thêm môn thất bại');
+                }
+            };
+            
+            // Modal sửa môn
+            const editModal = document.getElementById('editSubjectModal');
+            const cancelEditBtn = document.getElementById('cancelEditBtn');
+            const editForm = document.getElementById('editSubjectForm');
             
             window.openEditModal = (id) => {
                 const sub = subjects.find(s => s.id === id);
@@ -257,13 +344,13 @@
                 document.getElementById('editSubjectCode').value = sub.code;
                 document.getElementById('editSubjectCredits').value = sub.credits;
                 document.getElementById('editSubjectLecturer').value = sub.lecturer || '';
-                modal.classList.add('active');
+                editModal.classList.add('active');
             };
             
-            cancelBtn.onclick = () => modal.classList.remove('active');
-            modal.onclick = (e) => { if (e.target === modal) modal.classList.remove('active'); };
+            cancelEditBtn.onclick = () => editModal.classList.remove('active');
+            editModal.onclick = (e) => { if (e.target === editModal) editModal.classList.remove('active'); };
             
-            form.onsubmit = async (e) => {
+            editForm.onsubmit = async (e) => {
                 e.preventDefault();
                 const id = parseInt(document.getElementById('editSubjectId').value);
                 const updatedData = {
@@ -271,16 +358,19 @@
                     credits: parseInt(document.getElementById('editSubjectCredits').value),
                     lecturer: document.getElementById('editSubjectLecturer').value.trim()
                 };
-                await fetchAPI(`/api/subjects/${id}`, {
-                    method: 'PUT',
-                    body: JSON.stringify(updatedData)
-                });
-                // Cập nhật lại danh sách
+                await fetchAPI(`/api/subjects/${id}`, { method: 'PUT', body: JSON.stringify(updatedData) });
                 const fresh = await fetchAPI('/api/subjects');
                 subjects = fresh.filter(s => s.faculty === facultyName);
                 renderTable();
-                modal.classList.remove('active');
-                alert('Cập nhật thành công!');
+                editModal.classList.remove('active');
+            };
+            
+            window.deleteSubject = async (id) => {
+                if (!confirm('Bạn có chắc muốn xóa môn học này?')) return;
+                await fetchAPI(`/api/subjects/${id}`, { method: 'DELETE' });
+                const fresh = await fetchAPI('/api/subjects');
+                subjects = fresh.filter(s => s.faculty === facultyName);
+                renderTable();
             };
             
             document.getElementById('sendReqBtn').onclick = async () => {

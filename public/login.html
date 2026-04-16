@@ -6,44 +6,17 @@
     <title>Đăng nhập · Hệ thống Quản lý Học vụ</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Style chung (nếu có) -->
+    <link rel="stylesheet" href="css/style.css">
     <style>
-        body {
-            background: linear-gradient(135deg, #0f2b3d 0%, #1b4a6e 100%);
-            background-attachment: fixed;
-            position: relative;
-        }
-        body::before {
-            content: "";
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" opacity="0.08"><path fill="white" d="M20,30 L30,20 L40,30 L30,40 Z M60,70 L70,60 L80,70 L70,80 Z M80,20 L90,15 L85,25 Z M10,80 L20,75 L15,85 Z"/><circle cx="50" cy="50" r="3"/><circle cx="85" cy="85" r="2"/><circle cx="15" cy="15" r="2"/></svg>');
-            background-repeat: repeat;
-            background-size: 32px;
-            pointer-events: none;
-        }
-        .card {
-            backdrop-filter: blur(2px);
-            background: rgba(255, 255, 255, 0.98);
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-        .card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 25px 40px -12px rgba(0,0,0,0.25);
-        }
-        input:focus {
-            box-shadow: 0 0 0 3px rgba(59,130,246,0.2);
-            border-color: #3b82f6;
-            outline: none;
-        }
-        .btn-primary {
-            background: linear-gradient(to right, #2563eb, #1d4ed8);
-            transition: all 0.2s;
-        }
-        .btn-primary:hover {
-            background: linear-gradient(to right, #1d4ed8, #1e3a8a);
-            transform: scale(1.01);
-            box-shadow: 0 10px 20px -5px rgba(37,99,235,0.4);
-        }
+        /* Giữ nguyên CSS nội tuyến của bạn */
+        body { background: linear-gradient(135deg, #0f2b3d 0%, #1b4a6e 100%); background-attachment: fixed; position: relative; }
+        body::before { content: ""; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" opacity="0.08"><path fill="white" d="M20,30 L30,20 L40,30 L30,40 Z M60,70 L70,60 L80,70 L70,80 Z M80,20 L90,15 L85,25 Z M10,80 L20,75 L15,85 Z"/><circle cx="50" cy="50" r="3"/><circle cx="85" cy="85" r="2"/><circle cx="15" cy="15" r="2"/></svg>'); background-repeat: repeat; background-size: 32px; pointer-events: none; }
+        .card { backdrop-filter: blur(2px); background: rgba(255, 255, 255, 0.98); transition: transform 0.2s, box-shadow 0.2s; }
+        .card:hover { transform: translateY(-4px); box-shadow: 0 25px 40px -12px rgba(0,0,0,0.25); }
+        input:focus { box-shadow: 0 0 0 3px rgba(59,130,246,0.2); border-color: #3b82f6; outline: none; }
+        .btn-primary { background: linear-gradient(to right, #2563eb, #1d4ed8); transition: all 0.2s; }
+        .btn-primary:hover { background: linear-gradient(to right, #1d4ed8, #1e3a8a); transform: scale(1.01); box-shadow: 0 10px 20px -5px rgba(37,99,235,0.4); }
     </style>
 </head>
 <body class="min-h-screen flex items-center justify-center p-4 font-sans">
@@ -74,24 +47,17 @@
     </div>
 
     <script>
-        // Xác định API base URL (tự động lấy origin hiện tại, ví dụ http://localhost:3000)
         const API_BASE = window.location.origin;
 
-        // Hàm hiển thị lỗi
         function showError(message) {
             const errorDiv = document.getElementById('errorMsg');
             errorDiv.textContent = message;
             errorDiv.classList.remove('hidden');
-            // Ẩn sau 5 giây
-            setTimeout(() => {
-                errorDiv.classList.add('hidden');
-            }, 5000);
+            setTimeout(() => errorDiv.classList.add('hidden'), 5000);
         }
 
-        // Kiểm tra kết nối server trước khi đăng nhập (tuỳ chọn, giúp báo lỗi rõ hơn)
         async function checkServerConnection() {
             try {
-                // Gọi một API nhẹ (ví dụ /api/subjects) để kiểm tra server có phản hồi không
                 const res = await fetch(`${API_BASE}/api/subjects`, { method: 'HEAD' });
                 return res.ok;
             } catch (err) {
@@ -111,7 +77,6 @@
                 return;
             }
 
-            // Kiểm tra kết nối server trước
             const isConnected = await checkServerConnection();
             if (!isConnected) {
                 showError('❌ Không thể kết nối đến server. Hãy chắc chắn rằng bạn đã chạy "node server.js" và truy cập qua http://localhost:3000 (không phải file://)');
@@ -124,13 +89,9 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ username, password })
                 });
-
                 const data = await response.json();
-
                 if (data.success) {
-                    // Lưu thông tin user vào sessionStorage (không lưu mật khẩu)
                     sessionStorage.setItem('loggedUser', JSON.stringify(data.user));
-                    // Chuyển hướng đến dashboard
                     window.location.href = 'dashboard.html';
                 } else {
                     showError(data.message || 'Sai tên đăng nhập hoặc mật khẩu');

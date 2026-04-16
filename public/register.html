@@ -6,6 +6,7 @@
     <title>Đăng ký · Hệ thống Quản lý Học vụ</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/style.css">
     <style>
         body { background: linear-gradient(135deg, #0f2b3d 0%, #1b4a6e 100%); background-attachment: fixed; }
         .card { backdrop-filter: blur(2px); background: rgba(255, 255, 255, 0.98); }
@@ -38,8 +39,7 @@
                     <option value="training">Phòng Quản lý Sinh viên</option>
                 </select>
             </div>
-
-            <!-- Khoa (chỉ hiện khi chọn faculty) -->
+            <!-- Faculty group -->
             <div id="facultyGroup" class="mb-3 hidden">
                 <select id="facultyName" class="w-full border border-gray-300 rounded-xl p-3 bg-white">
                     <option value="">-- Chọn khoa --</option>
@@ -49,12 +49,10 @@
                     <option value="Ngôn ngữ">Ngôn ngữ</option>
                 </select>
             </div>
-
-            <!-- Giảng viên fields -->
+            <!-- Lecturer fields -->
             <div id="lecturerFields" class="hidden space-y-3">
                 <input type="text" id="lecturerCode" placeholder="Mã giảng viên (tùy chọn)" class="w-full border border-gray-300 rounded-xl p-3">
                 <input type="date" id="birthDate" class="w-full border border-gray-300 rounded-xl p-3">
-                <!-- BẮT BUỘC chọn khoa cho giảng viên -->
                 <select id="department" class="w-full border border-gray-300 rounded-xl p-3 bg-white">
                     <option value="">-- Chọn khoa trực thuộc --</option>
                     <option value="Công nghệ thông tin">Công nghệ thông tin</option>
@@ -63,7 +61,6 @@
                     <option value="Ngôn ngữ">Ngôn ngữ</option>
                 </select>
             </div>
-
             <div class="mb-3">
                 <input type="password" id="password" placeholder="Mật khẩu" class="w-full border border-gray-300 rounded-xl p-3" required>
                 <div class="text-xs text-gray-500 mt-1">Ít nhất 8 ký tự, gồm chữ hoa, thường, số, ký tự đặc biệt</div>
@@ -81,7 +78,6 @@
 
     <script>
         const API_BASE = window.location.origin;
-
         const roleSelect = document.getElementById('role');
         const facultyGroup = document.getElementById('facultyGroup');
         const lecturerFields = document.getElementById('lecturerFields');
@@ -124,7 +120,6 @@
             }
 
             const payload = { username, password, fullName, role };
-
             if (role === 'faculty') {
                 const facultyName = document.getElementById('facultyName').value;
                 if (!facultyName) {
