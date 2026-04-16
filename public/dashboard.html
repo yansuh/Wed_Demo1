@@ -11,10 +11,14 @@
         .card { background: white; border-radius: 1.5rem; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
         .btn-primary { background: #2563eb; color: white; padding: 8px 16px; border-radius: 12px; border: none; cursor: pointer; }
         .btn-danger { background: #fee2e2; color: #dc2626; padding: 8px 16px; border-radius: 12px; border: none; cursor: pointer; }
+        .btn-warning { background: #fef3c7; color: #d97706; padding: 8px 16px; border-radius: 12px; border: none; cursor: pointer; }
         input, select, textarea { border: 1px solid #e2e8f0; border-radius: 12px; padding: 8px 12px; width: 100%; }
         table { width: 100%; border-collapse: collapse; }
         th { text-align: left; padding: 10px 8px; background: #f8fafc; font-weight: 600; }
         td { padding: 10px 8px; border-bottom: 1px solid #f1f5f9; }
+        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 1000; }
+        .modal.active { display: flex; }
+        .modal-content { background: white; border-radius: 24px; max-width: 500px; width: 90%; padding: 24px; }
     </style>
 </head>
 <body>
@@ -44,23 +48,48 @@
         <div id="roleContent"></div>
     </div>
 
+    <!-- Modal sửa môn học (dùng cho Faculty) -->
+    <div id="editSubjectModal" class="modal">
+        <div class="modal-content">
+            <h3 class="text-lg font-bold mb-4">✏️ Chỉnh sửa môn học</h3>
+            <form id="editSubjectForm">
+                <input type="hidden" id="editSubjectId">
+                <div class="mb-3">
+                    <label class="block text-sm font-medium mb-1">Tên môn</label>
+                    <input type="text" id="editSubjectName" class="border rounded-xl p-2 w-full" required>
+                </div>
+                <div class="mb-3">
+                    <label class="block text-sm font-medium mb-1">Mã môn</label>
+                    <input type="text" id="editSubjectCode" class="border rounded-xl p-2 w-full" readonly disabled>
+                </div>
+                <div class="mb-3">
+                    <label class="block text-sm font-medium mb-1">Số tín chỉ</label>
+                    <input type="number" id="editSubjectCredits" class="border rounded-xl p-2 w-full" min="1" required>
+                </div>
+                <div class="mb-3">
+                    <label class="block text-sm font-medium mb-1">Giảng viên</label>
+                    <input type="text" id="editSubjectLecturer" class="border rounded-xl p-2 w-full">
+                </div>
+                <div class="flex gap-2 justify-end">
+                    <button type="button" id="cancelEditBtn" class="px-4 py-2 border rounded-xl">Hủy</button>
+                    <button type="submit" class="btn-primary">Lưu thay đổi</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script>
         const API_BASE = window.location.origin;
         let currentUser = null;
 
-        // Hàm gọi API an toàn
         async function fetchAPI(url, options = {}) {
             try {
                 const res = await fetch(`${API_BASE}${url}`, {
                     headers: { 'Content-Type': 'application/json' },
                     ...options
                 });
-                if (!res.ok) {
-                    console.error(`API ${url} lỗi ${res.status}`);
-                    return [];
-                }
-                const data = await res.json();
-                return data;
+                if (!res.ok) throw new Error(`Status ${res.status}`);
+                return await res.json();
             } catch (err) {
                 console.error('Lỗi fetchAPI:', err);
                 return [];
@@ -72,7 +101,6 @@
             return String(str).replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m]));
         }
 
-        // Khởi tạo trang
         window.addEventListener('DOMContentLoaded', async () => {
             const userStr = sessionStorage.getItem('loggedUser');
             if (!userStr) { window.location.href = 'login.html'; return; }
@@ -92,12 +120,10 @@
 
             await renderPanel();
 
-            // Gán sự kiện logout an toàn
             const logoutBtn = document.getElementById('logoutBtn');
             if (logoutBtn) {
                 logoutBtn.replaceWith(logoutBtn.cloneNode(true));
-                const newLogoutBtn = document.getElementById('logoutBtn');
-                newLogoutBtn.addEventListener('click', (e) => {
+                document.getElementById('logoutBtn').addEventListener('click', (e) => {
                     e.preventDefault();
                     if (confirm('Bạn có chắc muốn đăng xuất?')) {
                         sessionStorage.clear();
@@ -118,19 +144,21 @@
             }
         }
 
-        // ------------------- LECTURER -------------------
+        // ------------------- LECTURER (Chỉ xem môn thuộc khoa của mình) -------------------
         async function renderLecturerPanel() {
-            const subjects = await fetchAPI('/api/subjects');
-            console.log('Lecturer subjects:', subjects); // Debug
+            const allSubjects = await fetchAPI('/api/subjects');
+            // Lọc theo department của giảng viên
+            const lecturerDept = currentUser.department || '';
+            const subjects = allSubjects.filter(s => s.faculty === lecturerDept);
             
             const container = document.getElementById('roleContent');
             container.innerHTML = `
                 <div class="card p-6">
-                    <h2 class="text-xl font-bold">📖 Danh sách môn học</h2>
+                    <h2 class="text-xl font-bold">📖 Danh sách môn học - Khoa ${escapeHtml(lecturerDept)}</h2>
                     <input type="text" id="searchInput" placeholder="🔍 Tìm kiếm..." class="my-3 w-full md:w-96 border rounded-xl p-2">
                     <div class="overflow-x-auto">
                         <table class="min-w-full">
-                            <thead><tr><th>Tên môn</th><th>Khoa</th><th>Tín chỉ</th><th>Giảng viên</th></tr></thead>
+                            <thead><tr><th>Tên môn</th><th>Mã</th><th>Tín chỉ</th><th>Giảng viên</th></tr></thead>
                             <tbody id="lecturerTable"></tbody>
                         </table>
                     </div>
@@ -150,51 +178,110 @@
                 tbody.innerHTML = filtered.map(s => `
                     <tr>
                         <td>${escapeHtml(s.name)}</td>
-                        <td>${escapeHtml(s.faculty)}</td>
+                        <td>${escapeHtml(s.code)}</td>
                         <td>${s.credits}</td>
                         <td>${escapeHtml(s.lecturer)}</td>
                     </tr>
                 `).join('');
             }
-            
             renderTable();
             document.getElementById('searchInput').addEventListener('input', e => renderTable(e.target.value.toLowerCase()));
         }
 
-        // ------------------- FACULTY (Khoa) -------------------
+        // ------------------- FACULTY (Khoa) - Có quyền sửa môn -------------------
         async function renderFacultyPanel() {
-            const subjects = await fetchAPI('/api/subjects');
-            console.log('Faculty subjects:', subjects); // Debug
-            
+            const allSubjects = await fetchAPI('/api/subjects');
             const facultyName = currentUser.facultyName;
-            const filtered = subjects.filter(s => s.faculty === facultyName);
+            let subjects = allSubjects.filter(s => s.faculty === facultyName);
             
             const container = document.getElementById('roleContent');
             container.innerHTML = `
                 <div class="card p-6">
-                    <h2 class="text-xl font-bold">📚 Môn học thuộc khoa ${escapeHtml(facultyName)}</h2>
+                    <h2 class="text-xl font-bold">📚 Quản lý môn học - Khoa ${escapeHtml(facultyName)}</h2>
                     <div class="overflow-x-auto my-4">
                         <table class="min-w-full">
-                            <thead><tr><th>Tên môn</th><th>Mã</th><th>Tín chỉ</th><th>Giảng viên</th></tr></thead>
-                            <tbody id="facultySubjectTable">
-                                ${filtered.length > 0 
-                                    ? filtered.map(s => `<tr><td>${escapeHtml(s.name)}</td><td>${escapeHtml(s.code)}</td><td>${s.credits}</td><td>${escapeHtml(s.lecturer)}</td></tr>`).join('') 
-                                    : '<tr><td colspan="4" class="text-center py-4 text-gray-500">Chưa có môn học nào</td></tr>'
-                                }
-                            </tbody>
+                            <thead><tr><th>Tên môn</th><th>Mã</th><th>Tín chỉ</th><th>Giảng viên</th><th>Thao tác</th></tr></thead>
+                            <tbody id="facultySubjectTable"></tbody>
                         </table>
                     </div>
                     <div class="border-t pt-4">
                         <h3 class="font-semibold">✉️ Gửi yêu cầu cập nhật môn học</h3>
                         <select id="requestSubject" class="my-2 w-full border rounded-xl p-2">
                             <option value="">-- Chọn môn --</option>
-                            ${filtered.map(s => `<option value="${s.id}">${escapeHtml(s.name)}</option>`).join('')}
                         </select>
                         <textarea id="requestMsg" rows="2" placeholder="Nội dung yêu cầu..." class="mb-2 w-full border rounded-xl p-2"></textarea>
                         <button id="sendReqBtn" class="btn-primary">Gửi yêu cầu</button>
                     </div>
                 </div>
             `;
+            
+            function renderTable() {
+                const tbody = document.getElementById('facultySubjectTable');
+                const select = document.getElementById('requestSubject');
+                if (subjects.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4">Chưa có môn học nào</td></tr>';
+                    select.innerHTML = '<option value="">-- Chọn môn --</option>';
+                    return;
+                }
+                tbody.innerHTML = subjects.map(s => `
+                    <tr>
+                        <td>${escapeHtml(s.name)}</td>
+                        <td>${escapeHtml(s.code)}</td>
+                        <td>${s.credits}</td>
+                        <td>${escapeHtml(s.lecturer)}</td>
+                        <td>
+                            <button class="editSubBtn text-blue-600 mr-2" data-id="${s.id}"><i class="fas fa-edit"></i> Sửa</button>
+                        </td>
+                    </tr>
+                `).join('');
+                select.innerHTML = '<option value="">-- Chọn môn --</option>' + 
+                    subjects.map(s => `<option value="${s.id}">${escapeHtml(s.name)}</option>`).join('');
+                
+                document.querySelectorAll('.editSubBtn').forEach(btn => {
+                    btn.onclick = () => openEditModal(parseInt(btn.dataset.id));
+                });
+            }
+            
+            renderTable();
+            
+            // Modal chỉnh sửa
+            const modal = document.getElementById('editSubjectModal');
+            const cancelBtn = document.getElementById('cancelEditBtn');
+            const form = document.getElementById('editSubjectForm');
+            
+            window.openEditModal = (id) => {
+                const sub = subjects.find(s => s.id === id);
+                if (!sub) return;
+                document.getElementById('editSubjectId').value = sub.id;
+                document.getElementById('editSubjectName').value = sub.name;
+                document.getElementById('editSubjectCode').value = sub.code;
+                document.getElementById('editSubjectCredits').value = sub.credits;
+                document.getElementById('editSubjectLecturer').value = sub.lecturer || '';
+                modal.classList.add('active');
+            };
+            
+            cancelBtn.onclick = () => modal.classList.remove('active');
+            modal.onclick = (e) => { if (e.target === modal) modal.classList.remove('active'); };
+            
+            form.onsubmit = async (e) => {
+                e.preventDefault();
+                const id = parseInt(document.getElementById('editSubjectId').value);
+                const updatedData = {
+                    name: document.getElementById('editSubjectName').value.trim(),
+                    credits: parseInt(document.getElementById('editSubjectCredits').value),
+                    lecturer: document.getElementById('editSubjectLecturer').value.trim()
+                };
+                await fetchAPI(`/api/subjects/${id}`, {
+                    method: 'PUT',
+                    body: JSON.stringify(updatedData)
+                });
+                // Cập nhật lại danh sách
+                const fresh = await fetchAPI('/api/subjects');
+                subjects = fresh.filter(s => s.faculty === facultyName);
+                renderTable();
+                modal.classList.remove('active');
+                alert('Cập nhật thành công!');
+            };
             
             document.getElementById('sendReqBtn').onclick = async () => {
                 const subjectId = document.getElementById('requestSubject').value;
@@ -212,8 +299,6 @@
         // ------------------- TRAINING (Phòng Quản lý Sinh viên) -------------------
         async function renderTrainingPanel() {
             let subjects = await fetchAPI('/api/subjects');
-            console.log('Training subjects:', subjects); // Debug
-            
             const container = document.getElementById('roleContent');
             container.innerHTML = `
                 <div class="card p-6">
@@ -221,12 +306,9 @@
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-2 my-4">
                         <input id="subName" placeholder="Tên môn" class="border rounded-xl p-2">
                         <select id="subFaculty" class="border rounded-xl p-2">
-                            <option>Công nghệ thông tin</option>
-                            <option>Điện - Điện tử</option>
-                            <option>Kinh tế</option>
-                            <option>Ngôn ngữ</option>
+                            <option>Công nghệ thông tin</option><option>Điện - Điện tử</option><option>Kinh tế</option><option>Ngôn ngữ</option>
                         </select>
-                        <input id="subCredits" type="number" value="3" placeholder="Số tín chỉ" class="border rounded-xl p-2">
+                        <input id="subCredits" type="number" value="3" class="border rounded-xl p-2">
                         <input id="subLecturer" placeholder="Giảng viên" class="border rounded-xl p-2">
                     </div>
                     <button id="addSubBtn" class="btn-primary mb-4">+ Thêm môn</button>
@@ -236,79 +318,35 @@
                             <tbody id="subjectsTable"></tbody>
                         </table>
                     </div>
-                    <div class="mt-6">
-                        <h2 class="text-xl font-bold mb-2">👥 Quản lý tài khoản</h2>
-                        <div class="overflow-x-auto">
-                            <table class="min-w-full">
-                                <thead><tr><th>Username</th><th>Họ tên</th><th>Vai trò</th><th></th></tr></thead>
-                                <tbody id="accountsTable"></tbody>
-                            </table>
-                        </div>
-                    </div>
                 </div>
             `;
-            
-            // Render môn học
             function renderSubjects() {
                 const tbody = document.getElementById('subjectsTable');
-                if (!subjects || subjects.length === 0) {
+                if (!subjects.length) {
                     tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4">Chưa có môn học</td></tr>';
                     return;
                 }
                 tbody.innerHTML = subjects.map(s => `
                     <tr>
-                        <td>${escapeHtml(s.code)}</td>
-                        <td>${escapeHtml(s.name)}</td>
-                        <td>${escapeHtml(s.faculty)}</td>
-                        <td>${s.credits}</td>
-                        <td>${escapeHtml(s.lecturer)}</td>
+                        <td>${escapeHtml(s.code)}</td><td>${escapeHtml(s.name)}</td><td>${escapeHtml(s.faculty)}</td>
+                        <td>${s.credits}</td><td>${escapeHtml(s.lecturer)}</td>
                         <td><button class="delSubBtn text-red-500" data-id="${s.id}"><i class="fas fa-trash"></i></button></td>
                     </tr>
                 `).join('');
-                
                 document.querySelectorAll('.delSubBtn').forEach(btn => btn.onclick = async () => {
-                    if (confirm('Xóa môn học?')) {
+                    if(confirm('Xóa môn học?')) {
                         await fetchAPI(`/api/subjects/${btn.dataset.id}`, { method: 'DELETE' });
                         subjects = await fetchAPI('/api/subjects');
                         renderSubjects();
                     }
                 });
             }
-            
-            // Render tài khoản
-            async function renderAccounts() {
-                const users = await fetchAPI('/api/users');
-                const tbody = document.getElementById('accountsTable');
-                if (!users || users.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="4" class="text-center py-4">Không có tài khoản</td></tr>';
-                    return;
-                }
-                tbody.innerHTML = users.map(u => `
-                    <tr>
-                        <td>${escapeHtml(u.username)}</td>
-                        <td>${escapeHtml(u.fullName)}</td>
-                        <td>${escapeHtml(u.role)}</td>
-                        <td><button class="delUserBtn text-red-500" data-id="${u.id}"><i class="fas fa-trash"></i></button></td>
-                    </tr>
-                `).join('');
-                
-                document.querySelectorAll('.delUserBtn').forEach(btn => btn.onclick = async () => {
-                    if (confirm('Xóa tài khoản?')) {
-                        await fetchAPI(`/api/users/${btn.dataset.id}`, { method: 'DELETE' });
-                        renderAccounts();
-                    }
-                });
-            }
-            
             renderSubjects();
-            renderAccounts();
-            
             document.getElementById('addSubBtn').onclick = async () => {
                 const name = document.getElementById('subName').value.trim();
-                if (!name) return alert('Nhập tên môn');
+                if(!name) return alert('Nhập tên môn');
                 const newSub = {
-                    code: `M${Date.now()}`,
-                    name: name,
+                    code: `M${Date.now()}`, name,
                     faculty: document.getElementById('subFaculty').value,
                     credits: parseInt(document.getElementById('subCredits').value) || 3,
                     lecturer: document.getElementById('subLecturer').value.trim() || 'Chưa phân công',
@@ -318,15 +356,12 @@
                 subjects = await fetchAPI('/api/subjects');
                 renderSubjects();
                 document.getElementById('subName').value = '';
-                document.getElementById('subLecturer').value = '';
             };
         }
 
         // ------------------- ADMIN -------------------
         async function renderAdminPanel() {
             let users = await fetchAPI('/api/users');
-            console.log('Admin users:', users); // Debug
-            
             const container = document.getElementById('roleContent');
             container.innerHTML = `
                 <div class="card p-6">
@@ -347,48 +382,37 @@
                     </div>
                 </div>
             `;
-            
             function renderUsers() {
                 const tbody = document.getElementById('userTable');
-                if (!users || users.length === 0) {
+                if (!users.length) {
                     tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4">Không có tài khoản</td></tr>';
                     return;
                 }
                 tbody.innerHTML = users.map(u => `
                     <tr>
-                        <td>${escapeHtml(u.username)}</td>
-                        <td>${escapeHtml(u.fullName)}</td>
-                        <td>${escapeHtml(u.role)}</td>
+                        <td>${escapeHtml(u.username)}</td><td>${escapeHtml(u.fullName)}</td><td>${escapeHtml(u.role)}</td>
                         <td>${escapeHtml(u.facultyName || u.department || '')}</td>
                         <td><button class="delUserBtn text-red-500" data-id="${u.id}"><i class="fas fa-trash"></i></button></td>
                     </tr>
                 `).join('');
-                
                 document.querySelectorAll('.delUserBtn').forEach(btn => btn.onclick = async () => {
-                    if (confirm('Xóa tài khoản?')) {
+                    if(confirm('Xóa tài khoản?')) {
                         await fetchAPI(`/api/users/${btn.dataset.id}`, { method: 'DELETE' });
                         users = await fetchAPI('/api/users');
                         renderUsers();
                     }
                 });
             }
-            
             renderUsers();
-            
             document.getElementById('addUserBtn').onclick = async () => {
                 const username = document.getElementById('newUsername').value.trim();
                 const fullName = document.getElementById('newFullname').value.trim();
-                if (!username || !fullName) return alert('Nhập đủ thông tin');
-                const newUser = {
-                    username, fullName,
-                    role: document.getElementById('newRole').value,
-                    password: '123'
-                };
-                await fetchAPI('/api/users', { method: 'POST', body: JSON.stringify(newUser) });
+                if(!username || !fullName) return alert('Nhập đủ thông tin');
+                await fetchAPI('/api/users', { method: 'POST', body: JSON.stringify({
+                    username, fullName, role: document.getElementById('newRole').value, password: '123'
+                })});
                 users = await fetchAPI('/api/users');
                 renderUsers();
-                document.getElementById('newUsername').value = '';
-                document.getElementById('newFullname').value = '';
             };
         }
     </script>

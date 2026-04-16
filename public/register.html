@@ -7,26 +7,12 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body {
-            background: linear-gradient(135deg, #0f2b3d 0%, #1b4a6e 100%);
-            background-attachment: fixed;
-        }
-        .card {
-            backdrop-filter: blur(2px);
-            background: rgba(255, 255, 255, 0.98);
-        }
+        body { background: linear-gradient(135deg, #0f2b3d 0%, #1b4a6e 100%); background-attachment: fixed; }
+        .card { backdrop-filter: blur(2px); background: rgba(255, 255, 255, 0.98); }
         input, select { transition: all 0.2s; }
-        input:focus, select:focus {
-            box-shadow: 0 0 0 3px rgba(59,130,246,0.2);
-            border-color: #3b82f6;
-            outline: none;
-        }
-        .btn-primary {
-            background: linear-gradient(to right, #2563eb, #1d4ed8);
-        }
-        .btn-primary:hover {
-            background: linear-gradient(to right, #1d4ed8, #1e3a8a);
-        }
+        input:focus, select:focus { box-shadow: 0 0 0 3px rgba(59,130,246,0.2); border-color: #3b82f6; outline: none; }
+        .btn-primary { background: linear-gradient(to right, #2563eb, #1d4ed8); }
+        .btn-primary:hover { background: linear-gradient(to right, #1d4ed8, #1e3a8a); }
     </style>
 </head>
 <body class="min-h-screen flex items-center justify-center p-4">
@@ -66,10 +52,11 @@
 
             <!-- Giảng viên fields -->
             <div id="lecturerFields" class="hidden space-y-3">
-                <input type="text" id="lecturerCode" placeholder="Mã giảng viên" class="w-full border border-gray-300 rounded-xl p-3">
+                <input type="text" id="lecturerCode" placeholder="Mã giảng viên (tùy chọn)" class="w-full border border-gray-300 rounded-xl p-3">
                 <input type="date" id="birthDate" class="w-full border border-gray-300 rounded-xl p-3">
+                <!-- BẮT BUỘC chọn khoa cho giảng viên -->
                 <select id="department" class="w-full border border-gray-300 rounded-xl p-3 bg-white">
-                    <option value="">-- Khoa trực thuộc --</option>
+                    <option value="">-- Chọn khoa trực thuộc --</option>
                     <option value="Công nghệ thông tin">Công nghệ thông tin</option>
                     <option value="Điện - Điện tử">Điện - Điện tử</option>
                     <option value="Kinh tế">Kinh tế</option>

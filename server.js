@@ -269,7 +269,6 @@ app.put('/api/requests/:id', (req, res) => {
     }
 });
 
-// Fallback: Chuyển hướng các trang lỗi về trang chủ
 app.get('*', (req, res) => {
     if (req.path.includes('.')) {
         return res.status(404).send('File not found');
@@ -277,8 +276,8 @@ app.get('*', (req, res) => {
     res.redirect('/');
 });
 
-// Khởi động server
+
 app.listen(PORT, '0.0.0.0', () => {
-    console.log(`✅ Server đang chạy tại port ${PORT}`);
-    console.log(`📊 Tài khoản: ${accounts.length}, Môn học: ${subjects.length}`);
+    console.log(` Server đang chạy tại port ${PORT}`);
+    console.log(` Tài khoản: ${accounts.length}, Môn học: ${subjects.length}`);
 });
